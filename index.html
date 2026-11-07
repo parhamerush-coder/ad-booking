@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ثبت سفارش تبلیغات</title>
+<style>
+:root{--bg:#f6f6f6;--fg:#111;--muted:#666;--line:#ddd;--card:#fff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font-family:Tahoma,Arial,sans-serif}
+header{padding:34px 18px;text-align:center;background:#111;color:#fff}header h1{margin:0 0 10px;font-size:27px}header p{margin:0;color:#ccc}
+main{max-width:760px;margin:28px auto;padding:0 16px}.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:24px;margin-bottom:18px;box-shadow:0 8px 28px #00000008}
+h2{font-size:19px;margin:0 0 18px}label{display:block;font-size:14px;margin:14px 0 7px}
+input,textarea{width:100%;padding:13px;border:1px solid #ccc;border-radius:10px;font:inherit;background:#fff}
+textarea{min-height:90px;resize:vertical}.price{font-size:26px;font-weight:bold}.muted{color:var(--muted);font-size:13px;line-height:1.9}
+button{border:0;background:#111;color:#fff;padding:14px 20px;border-radius:10px;font:inherit;cursor:pointer;width:100%;margin-top:16px}
+button:disabled{opacity:.5;cursor:wait}.notice{padding:12px;border-radius:10px;background:#f0f0f0;margin:12px 0;line-height:1.9;word-break:break-word}
+#message{white-space:pre-wrap;line-height:1.9;margin-top:14px}.success{color:#087a37}.error{color:#b00020}
+a{color:inherit}
+</style>
+</head>
+<body>
+<header><h1>ثبت سفارش تبلیغات</h1><p>سفارش خود را ثبت کنید و با کد اختصاصی پیگیری کنید</p></header>
+<main>
+<section class="card">
+<h2>تعرفه و اطلاعات پرداخت</h2>
+<div class="price">۱۵٬۰۰۰ سکه</div>
+<div class="notice">شناسه واریز: <b dir="ltr">pkhlueaxcp</b></div>
+<p class="muted">پس از واریز، تصویر رسید را بارگذاری کنید. سفارش پس از بررسی مدیر تأیید یا رد می‌شود.</p>
+</section>
+<section class="card">
+<h2>فرم ثبت سفارش</h2>
+<form id="orderForm">
+<label>نام یا عنوان سفارش</label><input name="customer_name" maxlength="80" required>
+<label>راه ارتباطی (آیدی یا شماره تماس)</label><input name="contact" maxlength="100" required>
+<label>تاریخ شروع تبلیغ</label><input name="ad_date" type="date" required>
+<label>تصویر بنر تبلیغ (PNG / JPG / WEBP، حداکثر ۵ مگابایت)</label><input name="banner" type="file" accept="image/png,image/jpeg,image/webp" required>
+<label>تصویر رسید پرداخت (PNG / JPG / WEBP، حداکثر ۵ مگابایت)</label><input name="receipt" type="file" accept="image/png,image/jpeg,image/webp" required>
+<label>توضیحات (اختیاری)</label><textarea name="notes" maxlength="500"></textarea>
+<button id="submitBtn">ثبت سفارش</button>
+</form><div id="message" role="status"></div>
+</section>
+<section class="card">
+<h2>پیگیری سفارش</h2>
+<label>کد پیگیری</label><input id="tracking" placeholder="مثلاً AD-12AB34CD" dir="ltr">
+<button id="lookupBtn">پیگیری وضعیت</button><div id="lookupResult" class="muted"></div>
+</section>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPABASE_URL = "https://kxlcaoxfkscyivgvtiei.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_MU_VMXpbogJ5vYfvwstlRg_tbmygwNE";
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const form = document.getElementById('orderForm');
+const msg = document.getElementById('message');
+const maxBytes = 5 * 1024 * 1024;
+function validFile(file){return file && file.size <= maxBytes && ['image/png','image/jpeg','image/webp'].includes(file.type)}
+function ext(file){return ({'image/png':'png','image/jpeg':'jpg','image/webp':'webp'})[file.type]}
+async function upload(file, folder){
+  if(!validFile(file)) throw new Error('فایل باید تصویر PNG، JPG یا WEBP و حداکثر ۵ مگابایت باشد.');
+  const path = folder + '/' + crypto.randomUUID() + '.' + ext(file);
+  const {error} = await db.storage.from('ad-uploads').upload(path,file,{ upsert:false, contentType:file.type });
+  if(error) throw error;
+  return path;
+}
+form.addEventListener('submit', async e=>{
+  e.preventDefault(); const btn=document.getElementById('submitBtn'); btn.disabled=true; msg.className=''; msg.textContent='در حال بارگذاری فایل‌ها و ثبت سفارش...';
+  const d=new FormData(form);
+  try{
+    const banner=await upload(d.get('banner'),'banners');
+    const receipt=await upload(d.get('receipt'),'receipts');
+    const {data,error}=await db.rpc('create_ad_order',{
+      p_customer_name:d.get('customer_name'),p_contact:d.get('contact'),
+      p_ad_date:d.get('ad_date'),p_banner_path:banner,p_receipt_path:receipt,
+      p_notes:d.get('notes')||''
+    });
+    if(error) throw error;
+    msg.className='success'; msg.textContent='سفارش با موفقیت ثبت شد.\nکد پیگیری شما: '+data+'\nاین کد را حتماً نگه دارید.';
+    form.reset();
+  }catch(err){msg.className='error';msg.textContent='ثبت سفارش انجام نشد: '+(err.message||'خطای نامشخص');}
+  finally{btn.disabled=false;}
+});
+document.getElementById('lookupBtn').addEventListener('click',async()=>{
+ const out=document.getElementById('lookupResult');out.textContent='در حال بررسی...';
+ const code=document.getElementById('tracking').value.trim();
+ if(!code){out.textContent='کد پیگیری را وارد کنید.';return;}
+ const {data,error}=await db.rpc('lookup_ad_order',{p_tracking_code:code});
+ if(error){out.textContent='خطا در پیگیری: '+error.message;return;}
+ if(!data || !data.length){out.textContent='سفارشی با این کد پیدا نشد.';return;}
+ const statuses={pending:'در انتظار بررسی',approved:'تأیید شده',rejected:'رد شده'};
+ out.textContent='وضعیت: '+(statuses[data[0].status]||data[0].status)+' | تاریخ تبلیغ: '+data[0].ad_date;
+});
+</script>
+</body></html>
