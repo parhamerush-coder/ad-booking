@@ -4,7 +4,7 @@ Animal News – نسخه به‌روزشده با IP مرورگر، لیست س�
 - index.html: صفحه سفارش، دریافت IP عمومی از ipify در مرورگر، ثبت سفارش از Edge Function و چت مشتری
 - admin.html: پنل مدیر، تأیید/رد/جعلی، نمایش و رفع مسدودی IP، پاسخ به پیام‌ها
 - animal-news-full-migration.sql: SQL کامل تقویم + قیمت‌گذاری + محدودیت IP + لیست سیاه ۵ روزه + گفت‌وگو
-- supabase/functions/create-ad-order/index.ts: Edge Function ثبت سفارش
+- supabase/functions/create_ad_order/index.ts: Edge Function ثبت سفارش
 - supabase/config.toml: غیرفعال‌کردن JWT اجباری برای endpoint عمومی ثبت سفارش
 
 نصب:
@@ -13,7 +13,7 @@ Animal News – نسخه به‌روزشده با IP مرورگر، لیست س�
    این فایل شامل calendar-migration و migration امنیت/چت است؛ لازم نیست آن دو را جداگانه اجرا کنید.
 3. پوشه supabase را در ریشه مخزن پروژه قرار دهید.
 4. Supabase CLI را به پروژه متصل کنید و از ریشه پروژه اجرا کنید:
-   supabase functions deploy create-ad-order
+   supabase functions deploy create_ad_order
    اگر CLI فایل config.toml را خودکار از ریشه پروژه می‌خواند، از همین فایل استفاده شود.
 5. متغیرهای SUPABASE_URL و SUPABASE_SERVICE_ROLE_KEY باید در محیط Edge Function باشند. هرگز Service Role Key را داخل HTML قرار ندهید.
 6. index.html و admin.html و animal-news-logo.jpg را در محل انتشار سایت جایگزین کنید.
