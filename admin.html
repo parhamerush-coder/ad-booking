@@ -19,14 +19,6 @@ img{max-width:100%;max-height:260px;object-fit:contain;border:1px solid #45564d;
 .edit-actions{display:none;margin-top:12px;padding-top:12px;border-top:1px solid #34483d}.edit-actions.show{display:block}
 .empty{color:#9fb0a5;padding:12px}
 .tabs{display:flex;gap:7px;flex-wrap:wrap;margin:16px 0}.tabs button.active{background:#16764a}
-
-/* RGB accent treatment; existing panel backgrounds remain unchanged. */
-header{border-bottom:1px solid #ff00c8}
-header h1{background:linear-gradient(90deg,#ff00c8,#00d9ff,#9d5cff);background-clip:text;-webkit-background-clip:text;color:transparent}
-button:not(.danger):not(.ok):not(.warn){background:linear-gradient(100deg,#ff00c8,#00bfff,#8a5cff);color:#fff}
-.tabs button.active{background:linear-gradient(100deg,#ff00c8,#00d9ff)}
-.status,.approved-mark{color:#00e5ff}
-.count{border:1px solid #ff00c855}
 </style></head><body><header><h1>پنل مدیریت ANIMAL NEWS</h1><p>مدیریت سفارش‌های تبلیغات</p></header><main>
 <section class="card" id="loginCard"><h2>ورود مدیر</h2>
 <label>ایمیل</label><input id="email" type="email" autocomplete="username">
@@ -65,7 +57,7 @@ async function refresh(){
     : '<button class="ok restore">بازگرداندن سفارش</button>';
   el.innerHTML=`${statusVisual}<h3>${safe(o.customer_name)} — ${safe(o.tracking_code)}</h3>
   <p>راه ارتباطی: ${safe(o.contact)}</p><p>تاریخ تبلیغ: ${safe(o.ad_date)}</p>
-  <p>مدت زمان: ${safe(({12:"۱۲ ساعت",24:"۲۴ ساعت",permanent:"دائمی",special:"ویژه"})[o.duration_choice]||"ثبت نشده")}</p><p>آپشن: ${safe(o.duration_choice==="special"?"غیرفعال":({none:"بدون آپشن",1:"۱ ساعت",2:"۲ ساعت"})[o.option_choice]||"ثبت نشده")}</p><p>صورت حساب: ${safe(Number(o.amount_coins||0).toLocaleString("fa-IR"))} سکه</p><p>وضعیت: <span class="status">${safe(statusText[o.status]||o.status)}</span></p>
+  <p>مبلغ: ${safe(o.amount_coins)} سکه</p><p>وضعیت: <span class="status">${safe(statusText[o.status]||o.status)}</span></p>
   <p>توضیحات: ${safe(o.notes)}</p><div class="grid"><div><b>بنر</b><div class="banner">در حال دریافت...</div></div><div><b>رسید پرداخت</b><div class="receipt">در حال دریافت...</div></div></div>${actions}`;
   box.appendChild(el);
   for(const [cls,path] of [['banner',o.banner_path],['receipt',o.receipt_path]]){
