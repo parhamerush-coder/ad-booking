@@ -1,62 +1,94 @@
 <!doctype html>
 <html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>مدیریت سفارش‌های تبلیغات</title>
+<title>پنل مدیریت ANIMAL NEWS</title>
 <style>
-*{box-sizing:border-box}body{margin:0;background:#f5f5f5;color:#111;font-family:Tahoma,Arial,sans-serif}
-header{background:#111;color:#fff;padding:25px;text-align:center}main{max-width:1100px;margin:25px auto;padding:0 14px}
-.card{background:#fff;border:1px solid #ddd;border-radius:15px;padding:20px;margin-bottom:18px}
-input{padding:12px;border:1px solid #ccc;border-radius:8px;width:100%;font:inherit;margin:7px 0 13px}
-button{border:0;background:#111;color:white;padding:10px 16px;border-radius:8px;cursor:pointer;margin:4px;font:inherit}
-button.danger{background:#a40020}button.ok{background:#087a37}button:disabled{opacity:.5}
-.order{border:1px solid #ddd;border-radius:12px;padding:16px;margin:14px 0}
+*{box-sizing:border-box}body{margin:0;background:#0b1110;color:#edf5f0;font-family:Tahoma,Arial,sans-serif}
+header{background:linear-gradient(120deg,#102b22,#111827);color:#fff;padding:25px;text-align:center;border-bottom:1px solid #285640}
+main{max-width:1100px;margin:25px auto;padding:0 14px}.card{background:#121c19;border:1px solid #263c32;border-radius:16px;padding:20px;margin-bottom:18px}
+input{padding:12px;border:1px solid #496052;border-radius:8px;width:100%;font:inherit;margin:7px 0 13px;background:#0b1410;color:white}
+button{border:0;background:#34443b;color:white;padding:10px 16px;border-radius:9px;cursor:pointer;margin:4px;font:inherit}
+button.danger{background:#9b2638}button.ok{background:#087a48}button.warn{background:#9a6a18}button:disabled{opacity:.5}
+.order{position:relative;background:#101916;border:1px solid #34483d;border-radius:14px;padding:17px;margin:14px 0}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
-img{max-width:100%;max-height:260px;object-fit:contain;border:1px solid #ddd;border-radius:8px}
-.muted{color:#666;font-size:13px;line-height:1.8}.status{font-weight:bold}
-#message{white-space:pre-wrap;color:#b00020}
-</style></head><body><header><h1>پنل مدیریت سفارش‌ها</h1></header><main>
+img{max-width:100%;max-height:260px;object-fit:contain;border:1px solid #45564d;border-radius:8px}
+.muted{color:#a9b9af;font-size:13px;line-height:1.8}.status{font-weight:bold}
+#message{white-space:pre-wrap;color:#ff9ca8}.section-title{display:flex;align-items:center;gap:10px;margin:28px 0 10px}
+.section-title h2{margin:0}.count{font-size:13px;color:#b9c9bf;background:#26372e;padding:4px 10px;border-radius:20px}
+.approved-mark{display:flex;align-items:center;gap:12px;color:#62e6a0;font-size:20px;font-weight:bold;margin:12px 0}
+.big-check{width:54px;height:54px;border-radius:50%;display:grid;place-items:center;background:#124a31;color:#75f0aa;font-size:38px;box-shadow:0 0 22px #1a9d5c55}
+.edit-actions{display:none;margin-top:12px;padding-top:12px;border-top:1px solid #34483d}.edit-actions.show{display:block}
+.empty{color:#9fb0a5;padding:12px}
+.tabs{display:flex;gap:7px;flex-wrap:wrap;margin:16px 0}.tabs button.active{background:#16764a}
+
+/* RGB accent treatment; existing panel backgrounds remain unchanged. */
+header{border-bottom:1px solid #ff00c8}
+header h1{background:linear-gradient(90deg,#ff00c8,#00d9ff,#9d5cff);background-clip:text;-webkit-background-clip:text;color:transparent}
+button:not(.danger):not(.ok):not(.warn){background:linear-gradient(100deg,#ff00c8,#00bfff,#8a5cff);color:#fff}
+.tabs button.active{background:linear-gradient(100deg,#ff00c8,#00d9ff)}
+.status,.approved-mark{color:#00e5ff}
+.count{border:1px solid #ff00c855}
+</style></head><body><header><h1>پنل مدیریت ANIMAL NEWS</h1><p>مدیریت سفارش‌های تبلیغات</p></header><main>
 <section class="card" id="loginCard"><h2>ورود مدیر</h2>
 <label>ایمیل</label><input id="email" type="email" autocomplete="username">
 <label>رمز عبور</label><input id="password" type="password" autocomplete="current-password">
 <button id="loginBtn">ورود</button><div id="message"></div>
-<p class="muted">برای ورود از همان حسابی استفاده کنید که UUID آن را در جدول ad_admins ثبت کردید.</p></section>
-<section class="card" id="panel" hidden><button id="logoutBtn">خروج</button><button id="refreshBtn">به‌روزرسانی سفارش‌ها</button><div id="orders"></div></section>
+<p class="muted">با همان حساب مدیریتی که در جدول ad_admins ثبت شده وارد شوید.</p></section>
+<section class="card" id="panel" hidden><button id="logoutBtn">خروج</button><button id="refreshBtn">به‌روزرسانی سفارش‌ها</button>
+<div class="tabs"><button class="active" data-tab="all">همه سفارش‌ها</button><button data-tab="pending">در انتظار بررسی</button><button data-tab="approved">تأیید شده‌ها</button><button data-tab="rejected">رد شده‌ها</button></div>
+<div id="orders"></div></section>
 </main><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script>
 const SUPABASE_URL="https://kxlcaoxfkscyivgvtiei.supabase.co";
 const SUPABASE_ANON_KEY="sb_publishable_MU_VMXpbogJ5vYfvwstlRg_tbmygwNE";
 const db=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
 const msg=document.getElementById('message'), loginCard=document.getElementById('loginCard'), panel=document.getElementById('panel');
 const statusText={pending:'در انتظار بررسی',approved:'تأیید شده',rejected:'رد شده'};
+let currentTab='all';
+const safe=(v)=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 async function refresh(){
  const box=document.getElementById('orders');box.textContent='در حال دریافت سفارش‌ها...';
  const {data,error}=await db.from('ad_orders').select('*').order('created_at',{ascending:false});
  if(error){box.textContent='خطا: '+error.message;return;}
- if(!data.length){box.textContent='هنوز سفارشی ثبت نشده است.';return;}
+ const counts={pending:0,approved:0,rejected:0};(data||[]).forEach(o=>counts[o.status]=(counts[o.status]||0)+1);
+ document.querySelector('[data-tab="pending"]').textContent='در انتظار بررسی ('+(counts.pending||0)+')';
+ document.querySelector('[data-tab="approved"]').textContent='تأیید شده‌ها ('+(counts.approved||0)+')';
+ document.querySelector('[data-tab="rejected"]').textContent='رد شده‌ها ('+(counts.rejected||0)+')';
+ const shown=(data||[]).filter(o=>currentTab==='all'||o.status===currentTab);
+ if(!shown.length){box.innerHTML='<div class="empty">در این بخش سفارشی وجود ندارد.</div>';return;}
  box.innerHTML='';
- for(const o of data){
+ for(const o of shown){
   const el=document.createElement('article');el.className='order';
-  const safe=(v)=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  el.innerHTML=`<h3>${safe(o.customer_name)} — ${safe(o.tracking_code)}</h3>
+  let statusVisual=o.status==='approved'?'<div class="approved-mark"><span class="big-check">✓</span><span>تبلیغ تأیید و رزرو شد</span></div>':'';
+  let actions=o.status==='pending'
+   ? '<button class="ok approve">✓ تأیید سفارش</button><button class="danger reject">رد سفارش</button>'
+   : o.status==='approved'
+    ? '<button class="warn edit">ویرایش</button><div class="edit-actions"><button class="danger reject">رد و انتقال به ردشده‌ها</button><button class="warn cancel-approval">لغو تأیید و بازگشت به انتظار</button></div>'
+    : '<button class="ok restore">بازگرداندن سفارش</button>';
+  el.innerHTML=`${statusVisual}<h3>${safe(o.customer_name)} — ${safe(o.tracking_code)}</h3>
   <p>راه ارتباطی: ${safe(o.contact)}</p><p>تاریخ تبلیغ: ${safe(o.ad_date)}</p>
-  <p>مدت زمان: ${safe(({ '12h':'۱۲ ساعت','24h':'۲۴ ساعت',permanent:'دائمی',special:'ویژه' })[o.duration]||'—')}</p>
-  <p>آپشن / پست آخر: ${safe(({ none:'بدون آپشن','1h':'۱ ساعت','2h':'۲ ساعت' })[o.post_option]||'—')}</p>
-  <p>صورت‌حساب: ${safe(Number(o.amount_coins||0).toLocaleString('fa-IR'))} سکه</p><p>وضعیت: <span class="status">${safe(statusText[o.status]||o.status)}</span></p>
-  <p>توضیحات: ${safe(o.notes)}</p><div class="grid"><div><b>بنر</b><div class="banner">در حال دریافت...</div></div><div><b>رسید پرداخت</b><div class="receipt">در حال دریافت...</div></div></div>
-  <button class="ok approve">تأیید سفارش</button><button class="danger reject">رد سفارش</button>`;
+  <p>مدت زمان: ${safe(({12:"۱۲ ساعت",24:"۲۴ ساعت",permanent:"دائمی",special:"ویژه"})[o.duration_choice]||"ثبت نشده")}</p><p>آپشن: ${safe(o.duration_choice==="special"?"غیرفعال":({none:"بدون آپشن",1:"۱ ساعت",2:"۲ ساعت"})[o.option_choice]||"ثبت نشده")}</p><p>صورت حساب: ${safe(Number(o.amount_coins||0).toLocaleString("fa-IR"))} سکه</p><p>وضعیت: <span class="status">${safe(statusText[o.status]||o.status)}</span></p>
+  <p>توضیحات: ${safe(o.notes)}</p><div class="grid"><div><b>بنر</b><div class="banner">در حال دریافت...</div></div><div><b>رسید پرداخت</b><div class="receipt">در حال دریافت...</div></div></div>${actions}`;
   box.appendChild(el);
   for(const [cls,path] of [['banner',o.banner_path],['receipt',o.receipt_path]]){
    const {data:file,error:e}=await db.storage.from('ad-uploads').createSignedUrl(path,300);
    const target=el.querySelector('.'+cls);
    if(e){target.textContent='نمایش فایل ممکن نیست';continue;}
-   target.innerHTML=`<a href="${file.signedUrl}" target="_blank" rel="noopener">مشاهده تصویر</a><br><img src="${file.signedUrl}" alt="تصویر سفارش">`;
+   const a=document.createElement('a');a.href=file.signedUrl;a.target='_blank';a.rel='noopener';a.textContent='مشاهده تصویر';
+   const im=document.createElement('img');im.src=file.signedUrl;im.alt='تصویر سفارش';
+   target.replaceChildren(a,document.createElement('br'),im);
   }
   async function setStatus(status){
    const {error}=await db.from('ad_orders').update({status,reviewed_at:new Date().toISOString()}).eq('id',o.id);
-   if(error){alert('خطا: '+error.message);return;} await refresh();
+   if(error){alert('تغییر وضعیت انجام نشد: '+error.message);return;}
+   await refresh();
   }
-  el.querySelector('.approve').onclick=()=>setStatus('approved');
-  el.querySelector('.reject').onclick=()=>setStatus('rejected');
+  el.querySelector('.approve')?.addEventListener('click',()=>setStatus('approved'));
+  el.querySelector('.reject')?.addEventListener('click',()=>{if(confirm('این سفارش به بخش رد شده‌ها منتقل شود؟'))setStatus('rejected');});
+  el.querySelector('.edit')?.addEventListener('click',()=>el.querySelector('.edit-actions').classList.toggle('show'));
+  el.querySelector('.cancel-approval')?.addEventListener('click',()=>{if(confirm('تأیید لغو شود و سفارش به حالت انتظار برگردد؟'))setStatus('pending');});
+  el.querySelector('.restore')?.addEventListener('click',()=>{if(confirm('سفارش به حالت در انتظار بررسی بازگردد؟'))setStatus('pending');});
  }
 }
+document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>{currentTab=b.dataset.tab;document.querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('active',x===b));refresh();}));
 document.getElementById('loginBtn').onclick=async()=>{
  msg.textContent='';const {error}=await db.auth.signInWithPassword({email:document.getElementById('email').value,password:document.getElementById('password').value});
  if(error){msg.textContent=error.message;return;}
