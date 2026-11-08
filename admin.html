@@ -34,8 +34,9 @@ button:not(.danger):not(.ok):not(.warn){background:linear-gradient(100deg,#ff00c
 <button id="loginBtn">ورود</button><div id="message"></div>
 <p class="muted">با همان حساب مدیریتی که در جدول ad_admins ثبت شده وارد شوید.</p></section>
 <section class="card" id="panel" hidden><button id="logoutBtn">خروج</button><button id="refreshBtn">به‌روزرسانی سفارش‌ها</button>
-<div class="tabs"><button class="active" data-tab="all">همه سفارش‌ها</button><button data-tab="pending">در انتظار بررسی</button><button data-tab="approved">تأیید شده‌ها</button><button data-tab="rejected">رد شده‌ها</button></div>
-<div id="orders"></div></section>
+<div class="tabs"><button class="active" data-tab="all">همه سفارش‌ها</button><button data-tab="pending">در انتظار بررسی</button><button data-tab="approved">تأیید شده‌ها</button><button data-tab="rejected">رد شده‌ها</button><button data-tab="fake">جعلی‌ها 🚫</button>
+<button type="button" id="blockedTab">IPهای مسدود</button><button type="button" id="chatTab">💬 پیام‌ها</button></div>
+<div id="orders"></div><div id="blockedPanel" hidden></div><div id="chatPanel" hidden></div></section>
 </main><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script>
 const SUPABASE_URL="https://kxlcaoxfkscyivgvtiei.supabase.co";
 const SUPABASE_ANON_KEY="sb_publishable_MU_VMXpbogJ5vYfvwstlRg_tbmygwNE";
@@ -52,19 +53,19 @@ async function refresh(){
  document.querySelector('[data-tab="pending"]').textContent='در انتظار بررسی ('+(counts.pending||0)+')';
  document.querySelector('[data-tab="approved"]').textContent='تأیید شده‌ها ('+(counts.approved||0)+')';
  document.querySelector('[data-tab="rejected"]').textContent='رد شده‌ها ('+(counts.rejected||0)+')';
- const shown=(data||[]).filter(o=>currentTab==='all'||o.status===currentTab);
+ const shown=(data||[]).filter(o=>currentTab==='fake'?o.is_fake===true:(currentTab==='all'||o.status===currentTab));
  if(!shown.length){box.innerHTML='<div class="empty">در این بخش سفارشی وجود ندارد.</div>';return;}
  box.innerHTML='';
  for(const o of shown){
   const el=document.createElement('article');el.className='order';
   let statusVisual=o.status==='approved'?'<div class="approved-mark"><span class="big-check">✓</span><span>تبلیغ تأیید و رزرو شد</span></div>':'';
   let actions=o.status==='pending'
-   ? '<button class="ok approve">✓ تأیید سفارش</button><button class="danger reject">رد سفارش</button>'
+   ? '<button class="ok approve">✓ تأیید سفارش</button><button class="danger reject">رد سفارش</button><button class="warn mark-fake">جعلی 🚫</button>'
    : o.status==='approved'
     ? '<button class="warn edit">ویرایش</button><div class="edit-actions"><button class="danger reject">رد و انتقال به ردشده‌ها</button><button class="warn cancel-approval">لغو تأیید و بازگشت به انتظار</button></div>'
     : '<button class="ok restore">بازگرداندن سفارش</button>';
   el.innerHTML=`${statusVisual}<h3>${safe(o.customer_name)} — ${safe(o.tracking_code)}</h3>
-  <p>راه ارتباطی: ${safe(o.contact)}</p><p>تاریخ تبلیغ: ${safe(o.ad_date)}</p>
+  <p>راه ارتباطی: ${safe(o.contact)}</p><p>IP ثبت‌کننده: ${safe(o.client_ip||'ثبت نشده')}</p>${o.is_fake?'<p style="color:#ff829b">🚫 علامت‌گذاری‌شده به‌عنوان سفارش جعلی</p>':''}<p>تاریخ تبلیغ: ${safe(o.ad_date)}</p>
   <p>مدت زمان: ${safe(({12:"۱۲ ساعت",24:"۲۴ ساعت",permanent:"دائمی",special:"ویژه"})[o.duration_choice]||"ثبت نشده")}</p><p>آپشن: ${safe(o.duration_choice==="special"?"غیرفعال":({none:"بدون آپشن",1:"۱ ساعت",2:"۲ ساعت"})[o.option_choice]||"ثبت نشده")}</p><p>صورت حساب: ${safe(Number(o.amount_coins||0).toLocaleString("fa-IR"))} سکه</p><p>وضعیت: <span class="status">${safe(statusText[o.status]||o.status)}</span></p>
   <p>توضیحات: ${safe(o.notes)}</p><div class="grid"><div><b>بنر</b><div class="banner">در حال دریافت...</div></div><div><b>رسید پرداخت</b><div class="receipt">در حال دریافت...</div></div></div>${actions}`;
   box.appendChild(el);
@@ -82,13 +83,18 @@ async function refresh(){
    await refresh();
   }
   el.querySelector('.approve')?.addEventListener('click',()=>setStatus('approved'));
+  el.querySelector('.mark-fake')?.addEventListener('click',async()=>{
+   if(!confirm('این سفارش جعلی علامت‌گذاری شود و IP ثبت‌کننده دقیقاً ۵ روز مسدود شود؟'))return;
+   const {error}=await db.rpc('admin_mark_order_fake',{p_order_id:o.id});
+   if(error){alert('عملیات انجام نشد: '+error.message);return;}await refresh();
+  });
   el.querySelector('.reject')?.addEventListener('click',()=>{if(confirm('این سفارش به بخش رد شده‌ها منتقل شود؟'))setStatus('rejected');});
   el.querySelector('.edit')?.addEventListener('click',()=>el.querySelector('.edit-actions').classList.toggle('show'));
   el.querySelector('.cancel-approval')?.addEventListener('click',()=>{if(confirm('تأیید لغو شود و سفارش به حالت انتظار برگردد؟'))setStatus('pending');});
   el.querySelector('.restore')?.addEventListener('click',()=>{if(confirm('سفارش به حالت در انتظار بررسی بازگردد؟'))setStatus('pending');});
  }
 }
-document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>{currentTab=b.dataset.tab;document.querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('active',x===b));refresh();}));
+document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>{currentTab=b.dataset.tab;document.getElementById('orders').hidden=false;document.getElementById('blockedPanel').hidden=true;document.getElementById('chatPanel').hidden=true;document.querySelectorAll('[data-tab]').forEach(x=>x.classList.toggle('active',x===b));refresh();}));
 document.getElementById('loginBtn').onclick=async()=>{
  msg.textContent='';const {error}=await db.auth.signInWithPassword({email:document.getElementById('email').value,password:document.getElementById('password').value});
  if(error){msg.textContent=error.message;return;}
@@ -98,5 +104,30 @@ document.getElementById('loginBtn').onclick=async()=>{
 };
 document.getElementById('logoutBtn').onclick=async()=>{await db.auth.signOut();panel.hidden=true;loginCard.hidden=false;};
 document.getElementById('refreshBtn').onclick=refresh;
+
+async function showBlocked(){
+ const p=document.getElementById('blockedPanel'),o=document.getElementById('orders');o.hidden=true;p.hidden=false;document.getElementById('chatPanel').hidden=true;p.textContent='در حال دریافت...';
+ const {data,error}=await db.rpc('admin_list_blocked_ips');
+ if(error){p.textContent='خطا: '+error.message;return}
+ p.innerHTML='<h3>IPهای مسدودشده</h3>';
+ (data||[]).forEach(x=>{const d=document.createElement('div');d.className='order';d.textContent=x.ip_address+' — پایان: '+new Date(x.expires_at).toLocaleString('fa-IR')+' ';
+ const b=document.createElement('button');b.className='ok';b.textContent='رفع مسدودی';b.onclick=async()=>{if(!confirm('مسدودی این IP برداشته شود؟'))return;const {error}=await db.rpc('admin_unblock_ip',{p_ip:x.ip_address});if(error)alert(error.message);else showBlocked()};d.append(b);p.append(d)});
+ if(!data?.length)p.insertAdjacentHTML('beforeend','<p>IP مسدودی وجود ندارد.</p>');
+}
+async function showChats(){
+ const p=document.getElementById('chatPanel');p.hidden=false;document.getElementById('orders').hidden=true;document.getElementById('blockedPanel').hidden=true;p.textContent='در حال دریافت پیام‌ها...';
+ const {data,error}=await db.rpc('admin_list_chat_threads');
+ if(error){p.textContent='خطا: '+error.message;return}
+ p.innerHTML='<h3>گفت‌وگوهای سفارش‌ها</h3>';
+ (data||[]).forEach(t=>{const d=document.createElement('div');d.className='order';const h=document.createElement('h3');h.textContent='سفارش '+t.tracking_code;d.append(h);
+ const msgs=document.createElement('div');msgs.textContent='در حال دریافت پیام‌ها...';d.append(msgs);
+ const inp=document.createElement('textarea');inp.maxLength=1500;inp.placeholder='پاسخ مدیریت...';d.append(inp);
+ const b=document.createElement('button');b.className='ok';b.textContent='ارسال پاسخ';b.onclick=async()=>{const body=inp.value.trim();if(!body)return;const {error}=await db.rpc('admin_reply_chat',{p_order_id:t.order_id,p_body:body});if(error)alert(error.message);else{inp.value='';loadThread(t.order_id,msgs)}};d.append(b);p.append(d);loadThread(t.order_id,msgs)});
+ if(!data?.length)p.insertAdjacentHTML('beforeend','<p>پیامی ثبت نشده است.</p>');
+}
+async function loadThread(id,box){const {data,error}=await db.rpc('admin_get_chat',{p_order_id:id});box.replaceChildren();if(error){box.textContent=error.message;return}(data||[]).forEach(m=>{const q=document.createElement('p');q.style.whiteSpace='pre-wrap';q.textContent=(m.sender_role==='admin'?'مدیریت: ':'مشتری: ')+m.body;box.append(q)})}
+document.getElementById('blockedTab').onclick=showBlocked;
+document.getElementById('chatTab').onclick=showChats;
+
 db.auth.getSession().then(async({data})=>{if(data.session){const {data:a}=await db.from('ad_admins').select('user_id').maybeSingle();if(a){loginCard.hidden=true;panel.hidden=false;refresh();}}});
 </script></body></html>
